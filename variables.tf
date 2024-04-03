@@ -1,6 +1,17 @@
+variable "create_oidc_provider" {
+  description = "Whether to create the Github OIDC Provider resource"
+  type        = bool
+  default     = true
+}
+
 variable "github_org" {
   description = "The GitHub organization for which the OIDC provider is set up"
   type        = string
+
+  validation {
+    condition     = var.github_org != "GITHUB_ORG"
+    error_message = "The GitHub organization must not be 'GITHUB_ORG'."
+  }
 }
 
 variable "aws_policy_arn" {

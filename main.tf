@@ -9,6 +9,8 @@ terraform {
 data "aws_caller_identity" "current" {}
 
 resource "aws_iam_openid_connect_provider" "github_oidc_provider" {
+  count = var.create_oidc_provider ? 1 : 0
+
   url = "https://token.actions.githubusercontent.com"
   client_id_list = [
     "sts.amazonaws.com",
@@ -27,7 +29,7 @@ resource "aws_iam_role" "terrateam_role" {
       {
         Effect : "Allow",
         Principal : {
-          Federated : "arn:aws:iam::890930846956:oidc-provider/token.actions.githubusercontent.com"
+          Federated : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
         },
         Action : "sts:AssumeRoleWithWebIdentity",
         Condition : {
