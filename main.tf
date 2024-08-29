@@ -1,10 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
-    }
-  }
-}
 
 data "aws_caller_identity" "current" {}
 
@@ -21,28 +14,26 @@ resource "aws_iam_openid_connect_provider" "github_oidc_provider" {
   ]
 }
 
+locals {
+  github_scope = length(var.repositories) > 1 ? "multiple-repo" : (length(var.repositories) == 1 ? "single-repo" : "org")
+  scope = {
+    "multiple-repo" = jsonencode(
+      [for repo in var.repositories : "repo:${var.github_org}/${repo}:*"]
+    )
+    "single-repo" = "repo:${var.github_org}/${var.repositories[0]}:*"
+    "org"         = "repo:${var.github_org}/*"
+  }
+}
+
 resource "aws_iam_role" "terrateam_role" {
   name = var.aws_iam_role_name
-  assume_role_policy = jsonencode({
-    Version : "2012-10-17",
-    Statement : [
-      {
-        Effect : "Allow",
-        Principal : {
-          Federated : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
-        },
-        Action : "sts:AssumeRoleWithWebIdentity",
-        Condition : {
-          StringEquals : {
-            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
-          },
-          StringLike : {
-            "token.actions.githubusercontent.com:sub" : "repo:${var.github_org}/*"
-          }
-        }
-      }
-    ]
-  })
+  assume_role_policy = templatefile(
+    "${path.module}/templates/trust-policy.json.tftpl",
+    {
+      aws_account_id = data.aws_caller_identity.current.account_id
+      scope          = local.scope[local.github_scope]
+    }
+  )
 }
 
 resource "aws_iam_role_policy_attachment" "terrateam_iam_role_policy_attachment" {

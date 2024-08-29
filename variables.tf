@@ -14,6 +14,11 @@ variable "github_org" {
   }
 }
 
+variable "repositories" {
+  description = "Restrict to one or more repositories"
+  type        = list(string)
+}
+
 variable "aws_policy_arn" {
   description = "The Policy ARN to attach to the IAM role"
   type        = string
